@@ -4,6 +4,12 @@
 // Blob のキー設計：
 //   news/YYYY-MM-DD.json
 // 日付単位で1ファイルにまとめることで、GET /api/news の読み込みコストを最小化する
+//
+// アクセスモード: private
+// Vercel Blob ストアは private モードで作成されているため、put() に access: "public" は使えない。
+// private モードの場合、put() が返す URL はそのままフェッチできる（有効期限付き署名なし、
+// ただし BLOB_READ_WRITE_TOKEN での認証が必要）。
+// list() + fetch(url) の組み合わせで読み取りを行う。
 
 import {
   put,
@@ -28,15 +34,14 @@ export async function saveDailyNews(data: DailyNews): Promise<string> {
 
   try {
     const result = await put(path, json, {
-      access: "public",
+      // private ストアのため access: "public" は使えない
+      access: "private",
       contentType: "application/json",
-      // addRandomSuffix を false にすることで同じパスで上書きできる
       addRandomSuffix: false,
     });
     console.log(`[Blob] 保存完了: ${result.url}`);
     return result.url;
   } catch (error) {
-    // エラー型を明示してログに出す（Vercel ログで原因を追いやすくする）
     const detail = classifyBlobError(error);
     console.error(`[Blob] 保存失敗 (${detail}):`, error);
     throw new Error(`[Blob] 保存失敗 (path=${path}, reason=${detail})`);
@@ -45,15 +50,11 @@ export async function saveDailyNews(data: DailyNews): Promise<string> {
 
 // 指定日のニュースデータを Blob から読み込む
 // データが存在しない場合は null を返す（404 は正常系として扱う）
-//
-// head() ではなく list() を使う理由：
-// head() は Blob の完全 URL を要求するが、put() 後の URL はストアごとに異なる。
-// list({ prefix }) はパスのプレフィックスで検索できるため、パスだけで確実に URL を取得できる。
 export async function loadDailyNews(date: string): Promise<DailyNews | null> {
   const path = blobPath(date);
 
   try {
-    // list() でパスに一致するBlobを検索し、URL を取得する
+    // list() でパスに一致する Blob を検索し URL を取得する
     const { blobs } = await list({ prefix: path, limit: 1 });
 
     if (blobs.length === 0) {
@@ -61,8 +62,11 @@ export async function loadDailyNews(date: string): Promise<DailyNews | null> {
       return null;
     }
 
+    // private ストアの URL は BLOB_READ_WRITE_TOKEN による認証が必要
     const response = await fetch(blobs[0].url, {
-      // Vercel のエッジキャッシュを無視して常に最新を取得する
+      headers: {
+        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN ?? ""}`,
+      },
       cache: "no-store",
     });
 
@@ -79,7 +83,6 @@ export async function loadDailyNews(date: string): Promise<DailyNews | null> {
 }
 
 // Blob エラーを分類して原因を文字列で返す
-// Vercel ログでエラー種別が一目でわかるようにする
 function classifyBlobError(error: unknown): string {
   if (error instanceof BlobNotFoundError) return "not_found";
   if (error instanceof BlobStoreNotFoundError) return "store_not_found（Blobストアが未接続の可能性）";
@@ -92,7 +95,6 @@ function classifyBlobError(error: unknown): string {
 // サーバーのタイムゾーンに依存しないよう明示的に JST で計算する
 export function getTodayJST(): string {
   const now = new Date();
-  // UTC+9 のオフセットを加算
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   return jst.toISOString().slice(0, 10);
 }

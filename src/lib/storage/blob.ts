@@ -38,6 +38,8 @@ export async function saveDailyNews(data: DailyNews): Promise<string> {
       access: "private",
       contentType: "application/json",
       addRandomSuffix: false,
+      // 毎日 cron で同じパスに上書きするため明示的に許可する
+      allowOverwrite: true,
     });
     console.log(`[Blob] 保存完了: ${result.url}`);
     return result.url;

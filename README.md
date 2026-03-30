@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI News DJ
 
-## Getting Started
+キャラクター性のある語り口でニュースを届けるパーソナルAIニュースアプリ。
 
-First, run the development server:
+## 機能
+
+- RSS フィードからニュースを自動収集（毎日 JST 07:00）
+- 3種類のDJキャラクターがニュースを読み上げ
+- ジャンルフィルター（テクノロジー・ビジネス・国内・エンタメ・スポーツ）
+- Web Speech API による音声読み上げ
+
+## 開発環境のセットアップ
 
 ```bash
+# 1. 依存パッケージをインストール
+npm install
+
+# 2. 環境変数ファイルを作成
+cp .env.local.example .env.local
+# .env.local を編集して API キーを設定
+
+# 3. 開発サーバーを起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 環境変数
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 変数名 | 説明 |
+|--------|------|
+| `ANTHROPIC_API_KEY` | Anthropic API キー |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob トークン |
+| `CRON_SECRET` | cron-job.org 認証用シークレット |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**本番環境では Vercel ダッシュボードから設定すること（コードには絶対に書かない）。**
 
-## Learn More
+## Vercel へのデプロイ
 
-To learn more about Next.js, take a look at the following resources:
+1. GitHub リポジトリを作成してプッシュ
+2. Vercel でプロジェクトを新規作成（GitHub 連携）
+3. Vercel ダッシュボード → Settings → Environment Variables で環境変数を設定
+4. Vercel ダッシュボード → Storage → Blob でストレージを作成・接続
+5. デプロイ確認
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## cron-job.org の設定
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. cron-job.org でアカウント作成
+2. 新規ジョブを作成：
+   - URL: `https://your-app.vercel.app/api/cron`
+   - Method: `POST`
+   - Schedule: `0 22 * * *`（UTC 22:00 = JST 07:00）
+   - Headers: `Authorization: Bearer <CRON_SECRET の値>`
 
-## Deploy on Vercel
+## ディレクトリ構造
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/            # Next.js App Router
+├── components/     # UI コンポーネント（ロジックなし）
+├── hooks/          # カスタムフック
+├── lib/            # ビジネスロジック
+│   ├── ai/         # Claude API 要約
+│   ├── rss/        # RSS フェッチ
+│   ├── storage/    # Vercel Blob
+│   └── tts/        # Web Speech API
+├── config/         # 設定ファイル（キャラ・フィード・ジャンル）
+└── types/          # TypeScript 型定義
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## キャスト・フィードの追加方法
+
+| やりたいこと | 触るファイル |
+|-------------|-------------|
+| DJキャラを追加 | `src/config/characters.ts` + `src/types/news.ts` の `CharacterId` |
+| RSSフィードを追加 | `src/config/rss-feeds.ts` |
+| ジャンルを追加 | `src/config/genres.ts` + `src/types/news.ts` の `GenreId` |

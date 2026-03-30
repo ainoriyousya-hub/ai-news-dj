@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
+/* ベーステーマ：常にダーク */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #030712; /* gray-950 */
+  --foreground: #f9fafb; /* gray-50 */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ベーススタイル */
+html {
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  /* モバイルでのフォントサイズ自動調整を無効化（Safariのズーム防止）*/
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 横スクロールを含むコンテナでスクロールバーを非表示にする */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* 波形アニメーション：各バーに異なる高さを持たせる */
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+/* フォーカスリングをダークテーマに合わせる */
+:focus-visible {
+  outline: 2px solid #6366f1; /* indigo-500 */
+  outline-offset: 2px;
+}
+
+/* タップ時のハイライトを抑制（モバイル） */
+* {
+  -webkit-tap-highlight-color: transparent;
 }
